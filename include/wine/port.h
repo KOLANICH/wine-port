@@ -25,10 +25,6 @@
 # error You must include config.h to use this header
 #endif
 
-#ifdef __WINE_BASETSD_H
-# error You must include port.h before all other headers
-#endif
-
 #ifndef _GNU_SOURCE
 # define _GNU_SOURCE  /* for pread/pwrite, isfinite */
 #endif
@@ -46,7 +42,6 @@
 # include <process.h>
 #endif
 #include <string.h>
-#include <stdlib.h>
 #ifdef HAVE_UNISTD_H
 # include <unistd.h>
 #endif
@@ -57,51 +52,44 @@
  */
 
 #if !defined(_MSC_VER) && !defined(__int64)
-#  if defined(__x86_64__) || defined(__aarch64__) || defined(_WIN64)
+#  if defined(__x86_64__) || defined(_WIN64)
 #    define __int64 long
 #  else
 #    define __int64 long long
 #  endif
 #endif
 
-#ifndef HAVE_MODE_T
+#if !defined(HAVE_MODE_T) && !defined(_MODE_T)
 typedef int mode_t;
 #endif
-#ifndef HAVE_OFF_T
+#if !defined(HAVE_OFF_T) && !defined(_OFF_T)
 typedef long off_t;
 #endif
-#ifndef HAVE_PID_T
+#if !defined(HAVE_PID_T) && !defined(_PID_T)
 typedef int pid_t;
 #endif
-#ifndef HAVE_SIZE_T
+#if !defined(HAVE_SIZE_T) && !defined(_SIZE_T)
 typedef unsigned int size_t;
 #endif
-#ifndef HAVE_SSIZE_T
+#if !defined(HAVE_SSIZE_T) && !defined(_SSIZE_T)
 typedef int ssize_t;
 #endif
-#ifndef HAVE_FSBLKCNT_T
-typedef unsigned long fsblkcnt_t;
-#endif
-#ifndef HAVE_FSFILCNT_T
-typedef unsigned long fsfilcnt_t;
-#endif
+//#ifndef HAVE_SOCKLEN_T
+//typedef unsigned int socklen_t;
+//#endif
 
-#ifndef HAVE_STRUCT_STATVFS_F_BLOCKS
-struct statvfs
-{
-    unsigned long f_bsize;
-    unsigned long f_frsize;
-    fsblkcnt_t    f_blocks;
-    fsblkcnt_t    f_bfree;
-    fsblkcnt_t    f_bavail;
-    fsfilcnt_t    f_files;
-    fsfilcnt_t    f_ffree;
-    fsfilcnt_t    f_favail;
-    unsigned long f_fsid;
-    unsigned long f_flag;
-    unsigned long f_namemax;
+#ifndef HAVE_STATFS
+# ifdef __BEOS__
+#  define HAVE_STRUCT_STATFS_F_BFREE
+struct statfs {
+  long   f_bsize;  /* block_size */
+  long   f_blocks; /* total_blocks */
+  long   f_bfree;  /* free_blocks */
 };
-#endif /* HAVE_STRUCT_STATVFS_F_BLOCKS */
+# else /* defined(__BEOS__) */
+struct statfs;
+# endif /* defined(__BEOS__) */
+#endif /* !defined(HAVE_STATFS) */
 
 
 /****************************************************************
@@ -116,10 +104,6 @@ struct statvfs
 #define RTLD_GLOBAL  0x100
 #endif
 
-#ifdef HAVE_ONE_ARG_MKDIR
-#define mkdir(path,mode) mkdir(path)
-#endif
-
 #if !defined(HAVE_FTRUNCATE) && defined(HAVE_CHSIZE)
 #define ftruncate chsize
 #endif
@@ -132,10 +116,6 @@ struct statvfs
 #define pclose _pclose
 #endif
 
-#if !defined(HAVE_STRDUP) && defined(HAVE__STRDUP)
-#define strdup _strdup
-#endif
-
 #if !defined(HAVE_SNPRINTF) && defined(HAVE__SNPRINTF)
 #define snprintf _snprintf
 #endif
@@ -144,51 +124,18 @@ struct statvfs
 #define vsnprintf _vsnprintf
 #endif
 
-#if !defined(HAVE_STRTOLL) && defined(HAVE__STRTOI64)
-#define strtoll _strtoi64
-#endif
-
-#if !defined(HAVE_STRTOULL) && defined(HAVE__STRTOUI64)
-#define strtoull _strtoui64
-#endif
-
 #ifndef S_ISLNK
 # define S_ISLNK(mod) (0)
-#endif
-
-#ifndef S_ISSOCK
-# define S_ISSOCK(mod) (0)
-#endif
-
-#ifndef S_ISDIR
-# define S_ISDIR(mod) (((mod) & _S_IFMT) == _S_IFDIR)
-#endif
-
-#ifndef S_ISCHR
-# define S_ISCHR(mod) (((mod) & _S_IFMT) == _S_IFCHR)
-#endif
-
-#ifndef S_ISFIFO
-# define S_ISFIFO(mod) (((mod) & _S_IFMT) == _S_IFIFO)
-#endif
-
-#ifndef S_ISREG
-# define S_ISREG(mod) (((mod) & _S_IFMT) == _S_IFREG)
-#endif
+#endif /* S_ISLNK */
 
 /* So we open files in 64 bit access mode on Linux */
 #ifndef O_LARGEFILE
 # define O_LARGEFILE 0
 #endif
 
-#ifndef O_NONBLOCK
-# define O_NONBLOCK 0
-#endif
-
 #ifndef O_BINARY
 # define O_BINARY 0
 #endif
-
 
 /****************************************************************
  * Constants
@@ -200,6 +147,10 @@ struct statvfs
 
 #ifndef M_PI_2
 #define M_PI_2 1.570796326794896619
+#endif
+
+#ifndef M_PI_4
+#define M_PI_4 0.785398163397448309616
 #endif
 
 #ifndef INFINITY
@@ -220,6 +171,47 @@ static inline float __port_nan(void)
 #define NAN __port_nan()
 #endif
 
+/* Constructor functions */
+
+#ifdef _MSC_VER
+# define DECL_GLOBAL_CONSTRUCTOR(func) /* nothing */
+#elif defined(__GNUC__)
+# define DECL_GLOBAL_CONSTRUCTOR(func) \
+    static void func(void) __attribute__((constructor)); \
+    static void func(void)
+#elif defined(__i386__)
+# define DECL_GLOBAL_CONSTRUCTOR(func) \
+    static void __dummy_init_##func(void) { \
+        asm(".section .init,\"ax\"\n\t" \
+            "call " #func "\n\t" \
+            ".previous"); } \
+    static void func(void)
+#elif defined(__sparc__)
+# define DECL_GLOBAL_CONSTRUCTOR(func) \
+    static void __dummy_init_##func(void) { \
+        asm("\t.section \".init\",#alloc,#execinstr\n" \
+            "\tcall " #func "\n" \
+            "\tnop\n" \
+            "\t.section \".text\",#alloc,#execinstr\n" ); } \
+    static void func(void)
+#elif defined(_M_AMD64)
+#pragma message("You must define the DECL_GLOBAL_CONSTRUCTOR macro for amd64")
+#else
+# error You must define the DECL_GLOBAL_CONSTRUCTOR macro for your platform
+#endif
+
+
+/* Register functions */
+
+#ifdef __i386__
+#define DEFINE_REGS_ENTRYPOINT( name, fn, args, pop_args ) \
+    __ASM_GLOBAL_FUNC( name, \
+                       "call " __ASM_NAME("__wine_call_from_32_regs") "\n\t" \
+                       ".long " __ASM_NAME(#fn) "\n\t" \
+                       ".byte " #args "," #pop_args )
+/* FIXME: add support for other CPUs */
+#endif  /* __i386__ */
+
 
 /****************************************************************
  * Function definitions (only when using libwine_port)
@@ -227,11 +219,7 @@ static inline float __port_nan(void)
 
 #ifndef NO_LIBWINE_PORT
 
-#ifndef HAVE_FSTATVFS
-int fstatvfs( int fd, struct statvfs *buf );
-#endif
-
-#ifndef HAVE_GETOPT_LONG_ONLY
+#ifndef HAVE_GETOPT_LONG
 extern char *optarg;
 extern int optind;
 extern int opterr;
@@ -254,21 +242,21 @@ extern int getopt_long (int ___argc, char *const *___argv,
 extern int getopt_long_only (int ___argc, char *const *___argv,
                              const char *__shortopts,
                              const struct option *__longopts, int *__longind);
-#endif  /* HAVE_GETOPT_LONG_ONLY */
+#endif  /* HAVE_GETOPT_LONG */
 
-#ifndef HAVE_FFS
-int ffs( int x );
-#endif
+#ifndef HAVE_GETPAGESIZE
+size_t getpagesize(void);
+#endif  /* HAVE_GETPAGESIZE */
 
-#ifndef HAVE_ISFINITE
+#if !defined(HAVE_ISFINITE) && !defined(isfinite)
 int isfinite(double x);
 #endif
 
-#ifndef HAVE_ISINF
+#if !defined(HAVE_ISINF) && !defined(isinf)
 int isinf(double x);
 #endif
 
-#ifndef HAVE_ISNAN
+#if !defined(HAVE_ISNAN) && !defined(isnan)
 int isnan(double x);
 #endif
 
@@ -280,22 +268,7 @@ int lstat(const char *file_name, struct stat *buf);
 void *memmove(void *dest, const void *src, size_t len);
 #endif /* !defined(HAVE_MEMMOVE) */
 
-#ifndef HAVE_POLL
-struct pollfd
-{
-    int fd;
-    short events;
-    short revents;
-};
-#define POLLIN   0x01
-#define POLLPRI  0x02
-#define POLLOUT  0x04
-#define POLLERR  0x08
-#define POLLHUP  0x10
-#define POLLNVAL 0x20
-int poll( struct pollfd *fds, unsigned int count, int timeout );
-#endif /* HAVE_POLL */
-
+#ifndef __REACTOS__
 #ifndef HAVE_PREAD
 ssize_t pread( int fd, void *buf, size_t count, off_t offset );
 #endif /* HAVE_PREAD */
@@ -303,14 +276,20 @@ ssize_t pread( int fd, void *buf, size_t count, off_t offset );
 #ifndef HAVE_PWRITE
 ssize_t pwrite( int fd, const void *buf, size_t count, off_t offset );
 #endif /* HAVE_PWRITE */
+#endif /* __REACTOS__ */
 
-#ifndef HAVE_READLINK
-int readlink( const char *path, char *buf, size_t size );
-#endif /* HAVE_READLINK */
-
-#ifndef HAVE_STATVFS
-int statvfs( const char *path, struct statvfs *buf );
+#ifdef _WIN32
+#ifndef HAVE_SIGSETJMP
+# include <setjmp.h>
+typedef jmp_buf sigjmp_buf;
+int sigsetjmp( sigjmp_buf buf, int savesigs );
+void siglongjmp( sigjmp_buf buf, int val );
+#endif /* HAVE_SIGSETJMP */
 #endif
+
+#ifndef HAVE_STATFS
+int statfs(const char *name, struct statfs *info);
+#endif /* !defined(HAVE_STATFS) */
 
 #ifndef HAVE_STRNCASECMP
 # ifndef HAVE__STRNICMP
@@ -332,11 +311,7 @@ int strcasecmp(const char *str1, const char *str2);
 # endif
 #endif /* !defined(HAVE_STRCASECMP) */
 
-#ifndef HAVE_SYMLINK
-int symlink(const char *from, const char *to);
-#endif
-
-#ifndef HAVE_USLEEP
+#if !defined(HAVE_USLEEP) && !defined(__CYGWIN__)
 int usleep (unsigned int useconds);
 #endif /* !defined(HAVE_USLEEP) */
 
@@ -359,158 +334,50 @@ extern int mkstemps(char *template, int suffix_len);
 # define _P_NOWAITO 3
 # define _P_DETACH  4
 #endif
-#ifndef HAVE__SPAWNVP
-extern int _spawnvp(int mode, const char *cmdname, const char * const argv[]);
+#ifndef HAVE_SPAWNVP
+extern int spawnvp(int mode, const char *cmdname, const char * const argv[]);
 #endif
 
 /* Interlocked functions */
 
-#if defined(__GNUC__) && (defined(__i386__) || defined(__x86_64__))
+#if defined(_MSC_VER) || (defined(__i386__) && defined(__GNUC__) && !defined(WINE_PORT_NO_INTERLOCKED))
 
-static inline int interlocked_cmpxchg( int *dest, int xchg, int compare )
+#define interlocked_cmpxchg InterlockedCompareExchange
+#define interlocked_cmpxchg_ptr InterlockedCompareExchangePointer
+#define interlocked_xchg InterlockedExchange
+#define interlocked_xchg_ptr InterlockedExchangePointer
+#define interlocked_xchg_add InterlockedExchangeAdd
+
+
+#endif  /* __i386___ && __GNUC__ */
+
+#if defined(_MSC_VER)
+__forceinline
+int
+ffs(int mask)
 {
-    int ret;
-    __asm__ __volatile__( "lock; cmpxchgl %2,(%1)"
-                          : "=a" (ret) : "r" (dest), "r" (xchg), "0" (compare) : "memory" );
-    return ret;
-}
-
-static inline void *interlocked_cmpxchg_ptr( void **dest, void *xchg, void *compare )
-{
-    void *ret;
-#ifdef __x86_64__
-    __asm__ __volatile__( "lock; cmpxchgq %2,(%1)"
-                          : "=a" (ret) : "r" (dest), "r" (xchg), "0" (compare) : "memory" );
-#else
-    __asm__ __volatile__( "lock; cmpxchgl %2,(%1)"
-                          : "=a" (ret) : "r" (dest), "r" (xchg), "0" (compare) : "memory" );
-#endif
-    return ret;
-}
-
-static inline int interlocked_xchg( int *dest, int val )
-{
-    int ret;
-    __asm__ __volatile__( "lock; xchgl %0,(%1)"
-                          : "=r" (ret) : "r" (dest), "0" (val) : "memory" );
-    return ret;
-}
-
-static inline void *interlocked_xchg_ptr( void **dest, void *val )
-{
-    void *ret;
-#ifdef __x86_64__
-    __asm__ __volatile__( "lock; xchgq %0,(%1)"
-                          : "=r" (ret) :"r" (dest), "0" (val) : "memory" );
-#else
-    __asm__ __volatile__( "lock; xchgl %0,(%1)"
-                          : "=r" (ret) : "r" (dest), "0" (val) : "memory" );
-#endif
-    return ret;
-}
-
-static inline int interlocked_xchg_add( int *dest, int incr )
-{
-    int ret;
-    __asm__ __volatile__( "lock; xaddl %0,(%1)"
-                          : "=r" (ret) : "r" (dest), "0" (incr) : "memory" );
-    return ret;
-}
-
-#ifdef __x86_64__
-static inline unsigned char interlocked_cmpxchg128( __int64 *dest, __int64 xchg_high,
-                                                    __int64 xchg_low, __int64 *compare )
-{
-    unsigned char ret;
-    __asm__ __volatile__( "lock cmpxchg16b %0; setz %b2"
-                          : "=m" (dest[0]), "=m" (dest[1]), "=r" (ret),
-                            "=a" (compare[0]), "=d" (compare[1])
-                          : "m" (dest[0]), "m" (dest[1]), "3" (compare[0]), "4" (compare[1]),
-                            "c" (xchg_high), "b" (xchg_low) );
-    return ret;
-}
-#endif
-
-#else  /* __GNUC__ */
-
-#ifdef __GCC_HAVE_SYNC_COMPARE_AND_SWAP_4
-static inline int interlocked_cmpxchg( int *dest, int xchg, int compare )
-{
-    return __sync_val_compare_and_swap( dest, compare, xchg );
-}
-
-static inline int interlocked_xchg_add( int *dest, int incr )
-{
-    return __sync_fetch_and_add( dest, incr );
-}
-
-static inline int interlocked_xchg( int *dest, int val )
-{
-    int ret;
-    do ret = *dest; while (!__sync_bool_compare_and_swap( dest, ret, val ));
-    return ret;
+    long index;
+    if (_BitScanForward(&index, mask) == 0) return 0;
+    return index;
 }
 #else
-extern int interlocked_cmpxchg( int *dest, int xchg, int compare );
-extern int interlocked_xchg_add( int *dest, int incr );
-extern int interlocked_xchg( int *dest, int val );
-#endif
-
-#if (defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_4) && __SIZEOF_POINTER__ == 4) \
- || (defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_8) && __SIZEOF_POINTER__ == 8)
-static inline void *interlocked_cmpxchg_ptr( void **dest, void *xchg, void *compare )
-{
-    return __sync_val_compare_and_swap( dest, compare, xchg );
-}
-
-static inline void *interlocked_xchg_ptr( void **dest, void *val )
-{
-    void *ret;
-    do ret = *dest; while (!__sync_bool_compare_and_swap( dest, ret, val ));
-    return ret;
-}
-#else
-extern void *interlocked_cmpxchg_ptr( void **dest, void *xchg, void *compare );
-extern void *interlocked_xchg_ptr( void **dest, void *val );
-#endif
-
-#if defined(__x86_64__) || defined(__aarch64__) || defined(_WIN64)
-extern unsigned char interlocked_cmpxchg128( __int64 *dest, __int64 xchg_high,
-                                             __int64 xchg_low, __int64 *compare );
-#endif
-
-#endif  /* __GNUC__ */
-
-#ifdef __GCC_HAVE_SYNC_COMPARE_AND_SWAP_8
-static inline __int64 interlocked_cmpxchg64( __int64 *dest, __int64 xchg, __int64 compare )
-{
-    return __sync_val_compare_and_swap( dest, compare, xchg );
-}
-#else
-extern __int64 interlocked_cmpxchg64( __int64 *dest, __int64 xchg, __int64 compare );
+#define ffs __builtin_ffs
 #endif
 
 #else /* NO_LIBWINE_PORT */
 
 #define __WINE_NOT_PORTABLE(func) func##_is_not_portable func##_is_not_portable
 
-#define ffs                     __WINE_NOT_PORTABLE(ffs)
-#define fstatvfs                __WINE_NOT_PORTABLE(fstatvfs)
 #define getopt_long             __WINE_NOT_PORTABLE(getopt_long)
 #define getopt_long_only        __WINE_NOT_PORTABLE(getopt_long_only)
-#define interlocked_cmpxchg     __WINE_NOT_PORTABLE(interlocked_cmpxchg)
-#define interlocked_cmpxchg_ptr __WINE_NOT_PORTABLE(interlocked_cmpxchg_ptr)
-#define interlocked_xchg        __WINE_NOT_PORTABLE(interlocked_xchg)
-#define interlocked_xchg_ptr    __WINE_NOT_PORTABLE(interlocked_xchg_ptr)
-#define interlocked_xchg_add    __WINE_NOT_PORTABLE(interlocked_xchg_add)
+#define getpagesize             __WINE_NOT_PORTABLE(getpagesize)
 #define lstat                   __WINE_NOT_PORTABLE(lstat)
 #define memcpy_unaligned        __WINE_NOT_PORTABLE(memcpy_unaligned)
-#undef memmove
 #define memmove                 __WINE_NOT_PORTABLE(memmove)
 #define pread                   __WINE_NOT_PORTABLE(pread)
 #define pwrite                  __WINE_NOT_PORTABLE(pwrite)
 #define spawnvp                 __WINE_NOT_PORTABLE(spawnvp)
-#define statvfs                 __WINE_NOT_PORTABLE(statvfs)
+#define statfs                  __WINE_NOT_PORTABLE(statfs)
 #define strcasecmp              __WINE_NOT_PORTABLE(strcasecmp)
 #define strerror                __WINE_NOT_PORTABLE(strerror)
 #define strncasecmp             __WINE_NOT_PORTABLE(strncasecmp)
