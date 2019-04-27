@@ -2,22 +2,20 @@
    This file is derived from mkstemp.c from the GNU C Library.
 
    The GNU C Library is free software; you can redistribute it and/or
-   modify it under the terms of the GNU Library General Public License as
-   published by the Free Software Foundation; either version 2 of the
-   License, or (at your option) any later version.
+   modify it under the terms of the GNU Lesser General Public
+   License as published by the Free Software Foundation; either
+   version 2.1 of the License, or (at your option) any later version.
 
    The GNU C Library is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-   Library General Public License for more details.
+   Lesser General Public License for more details.
 
-   You should have received a copy of the GNU Library General Public
-   License along with the GNU C Library; see the file COPYING.LIB.  If not,
-   write to the Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
-   Boston, MA 02110-1301, USA  */
-
-#include "config.h"
-#include "wine/port.h"
+   You should have received a copy of the GNU Lesser General Public
+   License along with the GNU C Library; if not, write to the Free
+   Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+   Boston, MA 02110-1301, USA.
+*/
 
 #include <sys/types.h>
 #include <stdlib.h>
@@ -25,14 +23,13 @@
 #include <errno.h>
 #include <stdio.h>
 #include <fcntl.h>
-#ifdef HAVE_UNISTD_H
-#include <unistd.h>
-#endif
-#ifdef HAVE_SYS_TIME_H
-#include <sys/time.h>
-#endif
-#ifdef HAVE_PROCESS_H
-#include <process.h>
+
+#ifdef _WIN32
+    #include <io.h>
+    #include <process.h>
+#else
+    #include <unistd.h>
+    #include <sys/time.h>
 #endif
 
 /* We need to provide a type for gcc_uint64_t.  */
@@ -44,6 +41,11 @@ typedef unsigned long gcc_uint64_t;
 
 #ifndef TMP_MAX
 #define TMP_MAX 16384
+#endif
+
+/* if O_BINARY is not defined, the system is probably not expecting any such flag */
+#ifndef O_BINARY
+#define O_BINARY 0
 #endif
 
 /*
@@ -87,6 +89,7 @@ mkstemps (
   if ((int) len < 6 + suffix_len
       || strncmp (&template[len - 6 - suffix_len], "XXXXXX", 6))
     {
+      printf("wrong parameter\n");
       return -1;
     }
 
@@ -121,7 +124,7 @@ mkstemps (
 #ifdef VMS
       fd = open (template, O_RDWR|O_CREAT|O_EXCL, 0600, "fop=tmd");
 #else
-      fd = open (template, O_RDWR|O_CREAT|O_EXCL, 0600);
+      fd = open (template, O_RDWR|O_CREAT|O_EXCL|O_BINARY, 0600);
 #endif
       if (fd >= 0)
 	/* The file does not exist.  */
@@ -133,5 +136,7 @@ mkstemps (
       value += 7777;
     }
 
+  /* We return the null string if we can't find a unique file name.  */
+  template[0] = '\0';
   return -1;
 }
