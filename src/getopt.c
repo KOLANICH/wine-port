@@ -27,7 +27,7 @@
 # define _NO_PROTO
 #endif
 
-#include "config.h"
+#include "wine/config.h"
 #include "wine/port.h"
 
 #ifndef HAVE_GETOPT_LONG_ONLY

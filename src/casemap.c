@@ -1,10 +1,9 @@
 /* Unicode case mappings */
 /* generated from https://www.unicode.org/Public/13.0.0/ucd/UCD.zip:UnicodeData.txt */
 /* DO NOT EDIT!! */
+#include <wchar.h>
 
-#include "windef.h"
-
-const WCHAR wine_casemap_lower[4122] =
+const wchar_t wine_casemap_lower[4122] =
 {
     /* index */
     0x0100, 0x0200, 0x02f8, 0x0388, 0x0488, 0x0558, 0x05af, 0x05af,
@@ -526,7 +525,7 @@ const WCHAR wine_casemap_lower[4122] =
     0x0000, 0x0000
 };
 
-const WCHAR wine_casemap_upper[4557] =
+const wchar_t wine_casemap_upper[4557] =
 {
     /* index */
     0x0100, 0x0200, 0x02f8, 0x0397, 0x0493, 0x0563, 0x05ea, 0x05ea,

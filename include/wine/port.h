@@ -22,7 +22,7 @@
 #define __WINE_WINE_PORT_H
 
 #ifndef __WINE_CONFIG_H
-# error You must include config.h to use this header
+#include "config.h"
 #endif
 
 #ifdef __WINE_BASETSD_H

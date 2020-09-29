@@ -23,9 +23,9 @@
 #include <limits.h>
 #include <stdio.h>
 
-#include "wine/unicode.h"
+#include <wchar.h>
 
-int strcmpiW( const WCHAR *str1, const WCHAR *str2 )
+int strcmpiW( const wchar_t *str1, const wchar_t *str2 )
 {
     for (;;)
     {
@@ -36,7 +36,7 @@ int strcmpiW( const WCHAR *str1, const WCHAR *str2 )
     }
 }
 
-int strncmpiW( const WCHAR *str1, const WCHAR *str2, int n )
+int strncmpiW( const wchar_t *str1, const wchar_t *str2, int n )
 {
     int ret = 0;
     for ( ; n > 0; n--, str1++, str2++)
@@ -44,7 +44,7 @@ int strncmpiW( const WCHAR *str1, const WCHAR *str2, int n )
     return ret;
 }
 
-int memicmpW( const WCHAR *str1, const WCHAR *str2, int n )
+int memicmpW( const wchar_t *str1, const wchar_t *str2, int n )
 {
     int ret = 0;
     for ( ; n > 0; n--, str1++, str2++)
@@ -52,13 +52,13 @@ int memicmpW( const WCHAR *str1, const WCHAR *str2, int n )
     return ret;
 }
 
-WCHAR *strstrW( const WCHAR *str, const WCHAR *sub )
+wchar_t *strstrW( const wchar_t *str, const wchar_t *sub )
 {
     while (*str)
     {
-        const WCHAR *p1 = str, *p2 = sub;
+        const wchar_t *p1 = str, *p2 = sub;
         while (*p1 && *p2 && *p1 == *p2) { p1++; p2++; }
-        if (!*p2) return (WCHAR *)str;
+        if (!*p2) return (wchar_t *)str;
         str++;
     }
     return NULL;
@@ -67,15 +67,15 @@ WCHAR *strstrW( const WCHAR *str, const WCHAR *sub )
 /* strtolW and strtoulW implementation based on the GNU C library code */
 /* Copyright (C) 1991,92,94,95,96,97,98,99,2000,2001 Free Software Foundation, Inc. */
 
-long int strtolW( const WCHAR *nptr, WCHAR **endptr, int base )
+long int strtolW( const wchar_t *nptr, wchar_t **endptr, int base )
 {
   int negative;
   register unsigned long int cutoff;
   register unsigned int cutlim;
   register unsigned long int i;
-  register const WCHAR *s;
-  register WCHAR c;
-  const WCHAR *save, *end;
+  register const wchar_t *s;
+  register wchar_t c;
+  const wchar_t *save, *end;
   int overflow;
 
   if (base < 0 || base == 1 || base > 36) return 0;
@@ -150,7 +150,7 @@ long int strtolW( const WCHAR *nptr, WCHAR **endptr, int base )
   /* Store in ENDPTR the address of one character
      past the last character we converted.  */
   if (endptr != NULL)
-    *endptr = (WCHAR *)s;
+    *endptr = (wchar_t *)s;
 
   /* Check for a value that is within the range of
      `unsigned LONG int', but outside the range of `LONG int'.  */
@@ -178,25 +178,25 @@ noconv:
     {
       if (save - nptr >= 2 && toupperW (save[-1]) == 'X'
 	  && save[-2] == '0')
-	*endptr = (WCHAR *)&save[-1];
+	*endptr = (wchar_t *)&save[-1];
       else
 	/*  There was no number to convert.  */
-	*endptr = (WCHAR *)nptr;
+	*endptr = (wchar_t *)nptr;
     }
 
   return 0L;
 }
 
 
-unsigned long int strtoulW( const WCHAR *nptr, WCHAR **endptr, int base )
+unsigned long int strtoulW( const wchar_t *nptr, wchar_t **endptr, int base )
 {
   int negative;
   register unsigned long int cutoff;
   register unsigned int cutlim;
   register unsigned long int i;
-  register const WCHAR *s;
-  register WCHAR c;
-  const WCHAR *save, *end;
+  register const wchar_t *s;
+  register wchar_t c;
+  const wchar_t *save, *end;
   int overflow;
 
   if (base < 0 || base == 1 || base > 36) return 0;
@@ -271,7 +271,7 @@ unsigned long int strtoulW( const WCHAR *nptr, WCHAR **endptr, int base )
   /* Store in ENDPTR the address of one character
      past the last character we converted.  */
   if (endptr != NULL)
-    *endptr = (WCHAR *)s;
+    *endptr = (wchar_t *)s;
 
   if (overflow)
     {
@@ -291,18 +291,18 @@ noconv:
     {
       if (save - nptr >= 2 && toupperW (save[-1]) == 'X'
 	  && save[-2] == '0')
-	*endptr = (WCHAR *)&save[-1];
+	*endptr = (wchar_t *)&save[-1];
       else
 	/*  There was no number to convert.  */
-	*endptr = (WCHAR *)nptr;
+	*endptr = (wchar_t *)nptr;
     }
 
   return 0L;
 }
 
 
-/* format a WCHAR string according to a printf format; helper for vsnprintfW */
-static size_t format_string( WCHAR *buffer, size_t len, const char *format, const WCHAR *str, int str_len )
+/* format a wchar_t string according to a printf format; helper for vsnprintfW */
+static size_t format_string( wchar_t *buffer, size_t len, const char *format, const wchar_t *str, int str_len )
 {
     size_t count = 0;
     int i, left_align = 0, width = 0, max = 0;
@@ -341,7 +341,7 @@ static size_t format_string( WCHAR *buffer, size_t len, const char *format, cons
     }
 
     if (count < len)
-        memcpy( buffer, str, min( max, len - count ) * sizeof(WCHAR) );
+        memcpy( buffer, str, min( max, len - count ) * sizeof(wchar_t) );
     count += max;
     buffer += max;
 
@@ -356,10 +356,10 @@ static size_t format_string( WCHAR *buffer, size_t len, const char *format, cons
     return count;
 }
 
-int vsnprintfW(WCHAR *str, size_t len, const WCHAR *format, va_list valist)
+int vsnprintfW(wchar_t *str, size_t len, const wchar_t *format, va_list valist)
 {
     unsigned int written = 0;
-    const WCHAR *iter = format;
+    const wchar_t *iter = format;
     char bufa[512], fmtbufa[64], *fmta;
 
     while (*iter)
@@ -428,8 +428,8 @@ int vsnprintfW(WCHAR *str, size_t len, const WCHAR *format, va_list valist)
             {
             case 's':
             {
-                static const WCHAR none[] = { '(','n','u','l','l',')',0 };
-                const WCHAR *wstr = va_arg(valist, const WCHAR *);
+                static const wchar_t none[] = { '(','n','u','l','l',')',0 };
+                const wchar_t *wstr = va_arg(valist, const wchar_t *);
                 size_t remaining = written < len ? len - written : 0;
                 size_t count;
 
@@ -444,7 +444,7 @@ int vsnprintfW(WCHAR *str, size_t len, const WCHAR *format, va_list valist)
 
             case 'c':
             {
-                WCHAR wstr;
+                wchar_t wstr;
                 size_t remaining = written < len ? len - written : 0;
                 size_t count;
 
@@ -504,12 +504,12 @@ int vsnprintfW(WCHAR *str, size_t len, const WCHAR *format, va_list valist)
     return written < len ? (int)written : -1;
 }
 
-int vsprintfW( WCHAR *str, const WCHAR *format, va_list valist )
+int vsprintfW( wchar_t *str, const wchar_t *format, va_list valist )
 {
     return vsnprintfW( str, INT_MAX, format, valist );
 }
 
-int snprintfW( WCHAR *str, size_t len, const WCHAR *format, ...)
+int snprintfW( wchar_t *str, size_t len, const wchar_t *format, ...)
 {
     int retval;
     va_list valist;
@@ -519,7 +519,7 @@ int snprintfW( WCHAR *str, size_t len, const WCHAR *format, ...)
     return retval;
 }
 
-int sprintfW( WCHAR *str, const WCHAR *format, ...)
+int sprintfW( wchar_t *str, const wchar_t *format, ...)
 {
     int retval;
     va_list valist;

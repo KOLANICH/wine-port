@@ -1,8 +1,6 @@
 /* Unicode ctype tables */
 /* Automatically generated; DO NOT EDIT!! */
 
-#include "windef.h"
-
 const unsigned short wine_wctype_table[16242] =
 {
     /* offsets */
